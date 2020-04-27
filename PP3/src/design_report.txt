@@ -1,0 +1,193 @@
+Design report of CS564: PP3 Btree
+
+Implement choice:
+     1. How to keep track the path
+               Using a pid array of size 10 to keep the path, starting from the root, to the node that may contains the key.
+          A pointer to the last element of this array will be passed into insert functions and may perform the split or 
+          possibly, recursively split.
+
+     2. When unpin a page
+               Most pages will be unpinned immediately after they are no longer needed. The only exception is the 
+          currentPage, the page that may contain the next entry when searching. 
+          
+     3. Efficiency of the implementation
+               To insert/search a key, the current implementation will transverse the tree up and down at most  twice.
+               To find a insertion index in a node, the current complexity is O(logn)
+
+     4. lowValInt & highValInt
+               Current lowValInt/ highValInt is the value that is the closest number that is out of the search range. 
+          For example, for seach query GTE 1 and LTE 10, lowValInt is 0 and highValInt is 11;
+
+     5. add field size in leaf / non leaf node to keep track their size, the capacity of these node will be weakly reduced.
+
+     6. test case
+               Since the current structure can hold at most 697686 without splitting any non leaf node, three added test
+          will insert 700000 entries into index in forward/backward/random order to test non leaf node splitting.	
+
+     7. a list of all private method added
+    /**
+     * Assume file exists, Check is the metaInfo page is consistent with given info
+     * @param relationName
+     * @param attrByteOffset
+     * @param attrType
+     */
+    const void checkMetaValid(const std::string & relationName, int attrByteOffset, Datatype attrType);
+
+    /**
+     * Create a NonLeaf Node
+     * @param return pageId of the NonLeafNode
+     * @return a pointer of allocated Page
+     */
+    LeafNodeInt* createLeafNode(PageId &pageId);
+
+    /**
+     * Create a Leaf Node
+     * @param return pageId of the LeafNode
+     * @return a pointer of allocated Page
+     */
+    NonLeafNodeInt* createNonLeafNode(PageId &pageId);
+
+    /**
+     * This function is called when we need to split the root node
+     * Create a new root node with given key, assuming the new node only has one node
+     * @param popKey    the popped up key, this will be the only key insert to the root
+     * @param left      left pid
+     * @param right     right pid
+     */
+    const void createRootNode(int popKey, PageId left, PageId right);
+
+    /**
+     * change the root page number in meta data to make it consistence with the private field rootPageNum
+     */
+    const void changeRootPageNumInMetaData();
+
+    /**
+     * insert an <key, pid> entry to a nonLeafNode, assume no split
+     * @param nonLeafNode       pointer to nonLeafNode
+     * @param key       key to be inserted
+     * @param pageNo        pid to be inserted
+     * @param index     the insertion index
+     */
+    const void insertToNonLeafNode(NonLeafNodeInt* nonLeafNode, int key, PageId pageNo, int index);
+
+    /**
+     * Split a nonLeaf node into two nonLeafNode, the pop up <key, pid> should be <keyArray[midIndex], newNodeId>
+     * Note here both of the nonLeadNode is pinned
+     * @param nonLeafNode       node need to split
+     * @param midIndex          the index to separate the node
+     * @param pageId            return the pageId of new nonLeafNode
+     * @return                  a pointer of new nonLeafNode
+     */
+    const void insertToLeafNode(LeafNodeInt* leafNode, int key, RecordId rid, int index);
+
+    /**
+     * Find an index to insert a key.
+     * Here, we use a modified Binary search to find the smallest element that is larger than the key
+     * if all elements are smaller than the key, return size
+     * @param keyArray      the array that the key will be inserted
+     * @param key
+     * @param size          size of the array
+     * @return the index of insertion
+     */
+    int findIndexToInsert(int* keyArray, int key, int size);
+
+    /**
+     * Split a nonLeaf node into two by copying half of the record of the old node into the new node
+     * Assume the midIndex is the index that need to be popped up into the next level
+     * @param oldNonLeaf
+     * @param newNonLeaf
+     * @param midIndex          an index within the range of the old nonLeaf node, copy will begin from midIndex + 1
+     * @param size              size of the old Node, i.e. oldNonLeaf->size
+     */
+    const void splitNonLeafHelper(NonLeafNodeInt* oldNonLeaf, NonLeafNodeInt* newNonLeaf, int midIndex, int size);
+
+    /**
+     * This function will be called when a nonLeaf node is full and an entry is need to be inserted
+     * The entry that needs to be inserted is <key, pid>
+     * Pop up an entry <popKey, popPid> to the next higher level
+     * @param nonLeafNode
+     * @param nonLeafPid        the pid of the current nonLeaf node
+     * @param key
+     * @param pid
+     * @param popKey            return the popKey
+     * @param popPid            return the popPid
+     */
+    const void insertAndSplitNonLeaf(NonLeafNodeInt* nonLeafNode, PageId nonLeafPid, int key, PageId pid,
+            int &popKey, PageId &popPid);
+
+    /**
+     * Split a leaf node into two by copying half of the record of the old node into the new node
+     * start copying from the startIndex(inclusive)
+     * @param oldLeaf
+     * @param newLeaf
+     * @param startIndex    an index within the range of the old leaf node
+     * @param size          size of the old leaf node, i.e. oldLeaf->size
+     */
+    const void splitLeafHelper(LeafNodeInt* oldLeaf, LeafNodeInt* newLeaf, int startIndex, int size);
+
+    /**
+     * This function will be called when a leaf node is full and an entry is need to be inserted
+     * The entry that needs to be inserted is <key, rid>
+     * Pop up an entry <popKey, popPid> to the next higher level
+     * @param leafNode
+     * @param leafPid       the pid of the current leaf node
+     * @param key
+     * @param rid
+     * @param popKey        return the popKey
+     * @param popPid        return the popPid
+     */
+    const void insertAndSplitLeaf(LeafNodeInt* leafNode, PageId leafPid, int key, RecordId rid,
+            int &popKey, PageId &popPid);
+
+    /**
+     * Check is split is needed
+     * @param nonLeafNode
+     * @return                  1 if needed, -1 otherwise
+     */
+    int checkSplitNonLeaf(NonLeafNodeInt* nonLeafNode);
+
+    /**
+     * Check is split is needed
+     * @param leafNode
+     * @return                  1 if needed, -1 otherwise
+     */
+    int checkSplitLeaf(LeafNodeInt* leafNode);
+
+    /**
+     * This function will be called with a popped up entry <popKey, popPid>
+     * Pop this entry to the next higher level
+     * @param popKey
+     * @param popPid
+     * @param pathPid           pointer to the reverse path of pid, current node has *pathPid, its father node has pid
+     *                      of *(path - 1)
+     */
+    const void popEntryToNonLeaf(int popKey, PageId popPid, PageId* pathPid);
+
+    /**
+     * Insert an entry<key, pid> to a nonLeaf node, split may perform recursively
+     * @param nonLeafNode
+     * @param key
+     * @param pageId
+     * @param pathPid           pointer to the reverse path of pid, current node has *pathPid, its father node has pid
+     *                      of *(path - 1)
+     */
+    const void insertEntryToNonLeaf(NonLeafNodeInt* nonLeafNode, int key, PageId pageId, PageId* pathPid);
+
+    /**
+     * Insert an entry<key, rid> to a leaf node, split may perform recursively
+     * @param leafNode
+     * @param key
+     * @param recordId
+     * @param pathPid           pointer to the reverse path of pid, current node has *pathPid, its father node has pid
+     *                      of *(path - 1)
+     */
+    const void insertEntryToLeaf(LeafNodeInt* leafNode, int key, RecordId recordId, PageId* pathPid);
+
+    /**
+     * Assume currentPageData might contain next valid entry, find the first valid entry that is within the range
+     * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
+     */
+    const void findNextEntryHelper();
+
+
+    
