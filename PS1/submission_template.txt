@@ -1,0 +1,219 @@
+<?xml version="1.0"?>
+<pset>
+
+    <!--
+        CS 564, SPRING 2020
+        PROBLEM SET 1 SUBMISSION TEMPLATE
+
+        Please copy and paste your SQL queries into the appropriate spots below. 
+
+        When submitting SQL queries, please do not include the initial 
+        %sql or %%sql IPython commands. Just include the SQL code.
+
+        DO NOT DELETE THE <![CDATA[ ... ]]> LINES IN EACH <answer> TAG!
+        Doing so will break the autograder. To avoid accidentally breaking
+        something, please leave all existing comments in this template
+        intact in your submission.
+    -->
+
+    <student>
+        <name>
+            <!-- Insert your full name on the line below. -->
+            Kai Wang
+        </name>
+        <netid>
+            <!-- Insert your NetID (NOT your student ID number!) below. -->
+kwang339
+        </netid>
+        <studentid>
+            <!-- Insert your student ID number below. -->
+9077701853
+        </studentid>
+    </student>
+
+
+    <!-- BEGIN PROBLEM 1 -->
+    <answer number="1a">
+        <!-- Paste your solution to problem 1, part (a) below this line. --><![CDATA[
+
+SELECT i,j,val
+FROM A
+order by j, i;
+
+        ]]><!-- End problem 1, part (a). -->
+    </answer>
+    <answer number="1b">
+        <!-- Paste your solution to problem 1, part (b) below this line. --><![CDATA[
+
+SELECT SUM(A.val * B.val) AS "SUM(A.val * B.val)"
+FROM A, B
+WHERE A.j = 1
+AND B.j = 2
+AND A.i = B.i;
+
+        ]]><!-- End problem 1, part (b). -->
+    </answer>
+    <answer number="1c">
+        <!-- Paste your solution to problem 1, part (c) below this line. --><![CDATA[
+
+SELECT SUM(A.val * B.val) AS "SUM(A.val * B.val)"
+FROM A, B
+WHERE A.i = 1
+AND B.j = 2
+AND A.j = B.i;
+
+        ]]><!-- End problem 1, part (c). -->
+    </answer>
+    <answer number="1d">
+        <!-- Paste your solution to problem 1, part (d) below this line. --><![CDATA[
+
+SELECT A.i, B.j, SUM(A.val * B.val) AS val
+FROM A,B
+WHERE A.j = b.i
+GROUP BY A.i, B.j;
+
+        ]]><!-- End problem 1, part (d). -->
+    </answer>
+    <!-- END PROBLEM 1 -->
+
+
+    <!-- BEGIN PROBLEM 2 -->
+    <answer number="2a">
+        <!-- Paste your solution to problem 2, part (a) below this line. --><![CDATA[
+
+WITH S AS (SELECT Store, SUM(WeeklySales) AS AllSales
+           FROM Sales, Holidays
+           WHERE Sales.WeekDate = Holidays.WeekDate AND Holidays.IsHoliday = "TRUE"
+           GROUP BY Store)
+SELECT Store, ROUND(AllSales,2) AS AllSales
+FROM S
+WHERE AllSales IN (SELECT MIN(AllSales) From S)
+    OR AllSales IN (SELECT MAX(AllSales) From S);
+
+        ]]><!-- End problem 2, part (a). -->
+    </answer>
+    <answer number="2b">
+        <!-- Paste your solution to problem 2, part (b) below this line. --><![CDATA[
+
+WITH S AS (SELECT SUM(weeklysales) AS WS
+           FROM Sales, Holidays
+           WHERE Sales.weekdate = Holidays.weekdate AND Holidays.isholiday = "TRUE" 
+           GROUP BY Sales.weekdate),
+     G AS (SELECT AVG(S.WS) AS AVGS 
+           FROM S),
+     NonHolidaySale AS (SELECT SUM(weeklysales) AS WS 
+                        FROM Sales, Holidays
+                        WHERE Sales.weekdate = Holidays.weekdate AND Holidays.isholiday = "FALSE" 
+                        GROUP BY Sales.weekdate) 
+SELECT COUNT(*) AS NumNonHolidays
+FROM NonHolidaySale, G
+WHERE NonHolidaySale.WS > G.AVGS;
+
+        ]]><!-- End problem 2, part (b). -->
+    </answer>
+    <answer number="2c">
+        <!-- Paste your solution to problem 2, part (c) below this line. --><![CDATA[
+
+SELECT Stores.type, substr(Sales.weekdate, 6, 2) AS Month, ROUND(SUM(weeklysales), 2) AS TotalSales
+FROM Stores, Sales
+WHERE Stores.store = Sales.store
+GROUP BY Stores.type, Month;
+
+        ]]><!-- End problem 2, part (c). -->
+    </answer>
+    <answer number="2d">
+        <!-- Paste your solution to problem 2, part (d) below this line. --><![CDATA[
+
+DROP TABLE IF EXISTS Relation;
+CREATE TABLE Relation(
+    AttributeName CHAR(20) PRIMARY KEY,
+    CorrelationSign INTEGER
+);
+WITH average AS (SELECT AVG(weeklySales) AS AVGSALE, AVG(temperature) AS AVGTEM, AVG(fuelPrice) AS AVGFUEL, AVG(CPI) AS AVGCPI, AVG(unemploymentRate) AS AVGUNEMPLOY
+                 FROM Sales, TemporalData 
+                 WHERE Sales.store = TemporalData.store AND Sales.weekDate = TemporalData.weekDate),
+R AS (SELECT SUM((weeklySales - A.AVGSALE)*(T.temperature - A.AVGTEM)) AS TEM,
+          SUM((weeklySales - A.AVGSALE)*(T.fuelPrice - A.AVGFUEL)) AS FUEL,
+          SUM((weeklySales - A.AVGSALE)*(T.CPI - A.AVGCPI)) AS CPI,
+          SUM((weeklySales - A.AVGSALE)*(T.unemploymentRate - A.AVGUNEMPLOY)) AS UNEMPLOY
+      FROM TemporalData AS T, Sales AS S, average AS A
+      WHERE S.store = T.store AND S.weekDate = T.weekDate)
+
+INSERT INTO Relation(attributeName, correlationSign) 
+VALUES("Temperature", (SELECT R.TEM/ABS(R.TEM) FROM R)), 
+("FuelPrice", (SELECT R.FUEL/ABS(R.FUEL) FROM R)), 
+("CPI", (SELECT R.CPI/ABS(R.CPI) FROM R)),
+("UnemploymentRate", (SELECT R.UNEMPLOY/ABS(R.UNEMPLOY) FROM R));
+SELECT * FROM Relation;
+
+        ]]><!-- End problem 2, part (d). -->
+    </answer>
+    <!-- END PROBLEM 2 -->
+
+
+    <!-- BEGIN PROBLEM 3 -->
+    <answer number="3a">
+        <!-- Paste your solution to problem 3, part (a) below this line. --><![CDATA[
+
+SELECT S3.B AS company, S1.d + S2.d + S3.d AS distance
+FROM streets AS S1, streets AS S2, streets AS S3
+WHERE S1.A = "UW-Madison" AND S1.B = S2.A AND S2.B = S3.A AND distance <= 10
+UNION 
+SELECT S2.B AS company, S1.d + S2.d AS distance
+FROM streets AS S1, streets AS S2
+WHERE S1.A = "UW-Madison" AND S1.B = S2.A AND distance <= 10
+UNION 
+SELECT S1.B AS company, S1.d AS distance
+FROM streets AS S1
+WHERE S1.A = "UW-Madison" AND distance <= 10;
+
+        ]]><!-- End problem 3, part (a). -->
+    </answer>
+    <answer number="3b">
+        <!-- Paste your solution to problem 3, part (b) below this line. --><![CDATA[
+
+CREATE VIEW companies AS  SELECT S3.B AS company, S1.d + S2.d + S3.d AS distance
+                          FROM streets AS S1, streets AS S2, streets AS S3
+                          WHERE S1.A = "UW-Madison" AND S1.B = S2.A AND S2.B = S3.A AND distance <= 15
+                          UNION 
+                          SELECT S2.B AS company, S1.d + S2.d AS distance
+                          FROM streets AS S1, streets AS S2
+                          WHERE S1.A = "UW-Madison" AND S1.B = S2.A AND distance <= 15
+                          UNION 
+                          SELECT S1.B AS company, S1.d AS distance
+                          FROM streets AS S1
+                          WHERE S1.A = "UW-Madison" AND distance <= 15;
+SELECT C1.company, C2.company, C1.distance + C2.distance AS "distance"
+FROM companies C1, companies C2
+WHERE NOT C1.company = C2.company AND C1.distance + C2.distance <= 15;
+
+        ]]><!-- End problem 3, part (b). -->
+    </answer>
+    <answer number="3c">
+        <!-- Paste your solution to problem 3, part (c) below this line. --><![CDATA[
+
+WITH ID AS (SELECT S1.id
+           FROM streets S1, streets S2, streets S3
+           WHERE S1.B = S2.A AND S2.B = S3.A AND S1.A = S3.B
+           LIMIT 1)
+DELETE FROM streets WHERE streets.id IN ID;
+
+        ]]><!-- End problem 3, part (c). -->
+    </answer>
+    <answer number="3d">
+        <!-- Paste your solution to problem 3, part (d) below this line. --><![CDATA[
+
+WITH RECURSIVE distance(c1, c2, d, prev) AS (
+        SELECT A,B,d,A FROM streets GROUP BY A HAVING COUNT(*) = 1
+        UNION
+        SELECT c1, streets.B, streets.d + distance.d AS dis, c2
+        FROM streets, distance
+        WHERE (streets.B != prev) AND c2 = streets.A)
+SELECT c1 AS A,c2 AS B,MAX(d) AS "distance" FROM distance;
+
+        ]]><!-- End problem 3, part (d). -->
+    </answer>
+    <!-- END PROBLEM 3 -->
+
+
+</pset>
